@@ -93,9 +93,28 @@ app.get('/prompt', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`\nServer running on port ${PORT}`);
-  console.log(`Health: http://localhost:${PORT}/health`);
-  console.log(`Prompt: http://localhost:${PORT}/prompt`);
-  console.log(`Debug: http://localhost:${PORT}/debug/chunks\n`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n✓ Server running on port ${PORT}`);
+  console.log(`✓ Health: http://localhost:${PORT}/health`);
+  console.log(`✓ Prompt: http://localhost:${PORT}/prompt`);
+  console.log(`✓ Debug: http://localhost:${PORT}/debug/chunks\n`);
+});
+
+// Handle server errors
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+  } else {
+    console.error('❌ Server error:', error);
+  }
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
