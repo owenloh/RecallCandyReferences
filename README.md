@@ -94,7 +94,7 @@ Shows all parsed chunks for development/inspection.
 5. Add action: **Ask ChatGPT**
    - Prompt: 
      ```
-     Generate a sharp 6 to 10 word active recall cue from the material below. Prioritise one single clear idea, even if the chunk contains multiple ideas. If multiple sub-ideas exist, choose the most central or most recall-worthy one. Make it concise, specific, and useful for active recall. Do not explain. Output only the cue.
+     Generate a sharp 6 to 8 word active recall cue from the material below. Prioritise one single clear idea, even if the chunk contains multiple ideas. If multiple sub-ideas exist, choose the most central or most recall-worthy one. Make it concise, specific, and useful for active recall. Do not explain. Output only the cue.
      ```
 
 6. Add action: **Show result** or **Add to widget**

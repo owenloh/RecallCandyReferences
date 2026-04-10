@@ -1,11 +1,10 @@
-import fetch from 'node-fetch';
 import { EnrichedLink, Chunk } from './types';
 
 // Default timeout for link enrichment
 const DEFAULT_TIMEOUT = 3000;
 
 // Fetch page metadata with timeout
-async function fetchWithTimeout(url: string, timeout: number = DEFAULT_TIMEOUT): Promise<unknown | null> {
+async function fetchWithTimeout(url: string, timeout: number = DEFAULT_TIMEOUT): Promise<Response | null> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
 
@@ -17,7 +16,7 @@ async function fetchWithTimeout(url: string, timeout: number = DEFAULT_TIMEOUT):
       },
     });
     clearTimeout(id);
-    return response as unknown;
+    return response;
   } catch (error) {
     clearTimeout(id);
     console.warn(`Failed to fetch ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -105,16 +104,12 @@ export async function enrichLink(link: EnrichedLink, timeout: number = DEFAULT_T
         // Also try to get title from page
         const response = await fetchWithTimeout(link.url, timeout);
         
-        if (response) {
-          const fetchResponse = response as { ok: boolean; text: () => Promise<string> };
+        if (response && response.ok) {
+          const html = await response.text();
+          const metadata = extractHtmlContent(html);
           
-          if (fetchResponse.ok) {
-            const html = await fetchResponse.text();
-            const metadata = extractHtmlContent(html);
-            
-            if (metadata.title) {
-              enriched.title = metadata.title;
-            }
+          if (metadata.title) {
+            enriched.title = metadata.title;
           }
         }
         
@@ -127,17 +122,11 @@ export async function enrichLink(link: EnrichedLink, timeout: number = DEFAULT_T
     // Regular link enrichment
     const response = await fetchWithTimeout(link.url, timeout);
 
-    if (!response) {
+    if (!response || !response.ok) {
       return enriched;
     }
 
-    const fetchResponse = response as { ok: boolean; text: () => Promise<string> };
-
-    if (!fetchResponse.ok) {
-      return enriched;
-    }
-
-    const html = await fetchResponse.text();
+    const html = await response.text();
 
     // Extract metadata
     const metadata = extractHtmlContent(html);
