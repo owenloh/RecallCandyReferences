@@ -78,12 +78,6 @@ export function formatChunkForResponse(chunk: Chunk): string {
     for (const link of chunk.links) {
       if (link.title) {
         result += `\n[${link.domain}] ${link.title}`;
-        if (link.description) {
-          result += ` - ${link.description}`;
-        }
-        if (link.transcriptSnippet) {
-          result += ` - ${link.transcriptSnippet}`;
-        }
       } else {
         result += `\n[${link.domain}] ${link.url}`;
       }
