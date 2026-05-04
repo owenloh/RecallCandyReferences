@@ -64,8 +64,8 @@ function extractYouTubeId(url: string): string | null {
 // Fetch YouTube transcript
 async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
   try {
-    // Dynamic import to avoid issues
-    const { YoutubeTranscript } = await import('youtube-transcript');
+    // Use dynamic import for ES Module
+    const { YoutubeTranscript } = await (Function('return import("youtube-transcript")')() as Promise<any>);
     
     const transcript = await YoutubeTranscript.fetchTranscript(videoId);
     
@@ -79,7 +79,7 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
     
     return snippet + (fullText.length > 500 ? '...' : '');
   } catch (error) {
-    console.warn(`Failed to fetch YouTube transcript for ${videoId}:`, error instanceof Error ? error.message : 'Unknown error');
+    // Silently fail - transcripts are optional
     return null;
   }
 }
@@ -89,37 +89,7 @@ export async function enrichLink(link: EnrichedLink, timeout: number = DEFAULT_T
   const enriched = { ...link };
 
   try {
-    // Special handling for YouTube
-    if (link.domain.includes('youtube.com') || link.domain.includes('youtu.be')) {
-      const videoId = extractYouTubeId(link.url);
-      
-      if (videoId) {
-        // Try to get transcript
-        const transcript = await fetchYouTubeTranscript(videoId);
-        
-        if (transcript) {
-          enriched.transcriptSnippet = transcript;
-        }
-        
-        // Also try to get title from page
-        const response = await fetchWithTimeout(link.url, timeout);
-        
-        if (response && response.ok) {
-          const html = await response.text();
-          const metadata = extractHtmlContent(html);
-          
-          if (metadata.title) {
-            enriched.title = metadata.title;
-          }
-        }
-        
-        enriched.title = enriched.title || `[YouTube: ${videoId}]`;
-        
-        return enriched;
-      }
-    }
-
-    // Regular link enrichment
+    // Fetch page metadata
     const response = await fetchWithTimeout(link.url, timeout);
 
     if (!response || !response.ok) {
@@ -132,6 +102,14 @@ export async function enrichLink(link: EnrichedLink, timeout: number = DEFAULT_T
     const metadata = extractHtmlContent(html);
     if (metadata.title) enriched.title = metadata.title;
     if (metadata.description) enriched.description = metadata.description;
+
+    // Special note for YouTube (no transcript for now)
+    if (link.domain.includes('youtube.com') || link.domain.includes('youtu.be')) {
+      const videoId = extractYouTubeId(link.url);
+      if (videoId && !enriched.title) {
+        enriched.title = `[YouTube: ${videoId}]`;
+      }
+    }
 
   } catch (error) {
     console.warn(`Error enriching link ${link.url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
