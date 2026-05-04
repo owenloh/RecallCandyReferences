@@ -26,14 +26,41 @@ app.get('/debug/chunks', async (req, res) => {
 
     const blocks = await fetchPageBlocks(pageId);
     const rawChunks = parseBlocksToChunks(blocks);
-    const chunks = createChunks(rawChunks.join('\n\n'));
+    const allChunks = createChunks(rawChunks.join('\n\n'));
 
-    const debugOutput = chunks.map((chunk, index) => formatChunkForDebug(chunk, index)).join('\n\n');
+    const debugOutput = allChunks.map((chunk, index) => formatChunkForDebug(chunk, index)).join('\n\n');
 
     res.status(200).send(debugOutput);
   } catch (error) {
     console.error('Error in /debug/chunks:', error);
     res.status(500).json({ error: 'Failed to fetch chunks' });
+  }
+});
+
+// Stats endpoint - show chunk count and history
+app.get('/stats', async (req, res) => {
+  try {
+    const pageId = process.env.NOTION_PAGE_ID;
+    const historySize = parseInt(process.env.HISTORY_SIZE || '10', 10);
+
+    if (!pageId) {
+      return res.status(500).json({ error: 'NOTION_PAGE_ID not configured' });
+    }
+
+    const history = getHistory(historySize);
+    const blocks = await fetchPageBlocks(pageId);
+    const rawChunks = parseBlocksToChunks(blocks);
+    const allChunks = createChunks(rawChunks.join('\n\n'));
+
+    res.status(200).json({
+      totalBlocks: blocks.length,
+      totalChunks: allChunks.length,
+      recentlyServed: history.getAll(),
+      availableChunks: allChunks.length - history.getAll().length,
+    });
+  } catch (error) {
+    console.error('Error in /stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
@@ -69,10 +96,8 @@ app.get('/prompt', async (req, res) => {
       return res.status(500).json({ error: 'No chunks available' });
     }
 
-    // Select a chunk (deterministic based on date)
-    const today = new Date();
-    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
-    const chunkIndex = dayOfYear % chunksToServe.length;
+    // Select a chunk randomly (not deterministic)
+    const chunkIndex = Math.floor(Math.random() * chunksToServe.length);
     const selectedChunk = chunksToServe[chunkIndex];
 
     // Enrich links
